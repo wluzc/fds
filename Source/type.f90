@@ -768,6 +768,10 @@ TYPE REACTION_TYPE
    REAL(EB) :: RT1_TROE                     !< TROE reaction 1/T1
    REAL(EB) :: T2_TROE                      !< TROE reaction T2
    REAL(EB) :: RT3_TROE                     !< TROE reaction 1/T3
+   REAL(EB) :: A_COEF		 	    !< Coefficient a in ignition temperature 
+   REAL(EB) :: B_COEF		 	    !< Coefficient b in ignition temperature 
+   REAL(EB) :: C_COEF		 	    !< Coefficient c in ignition temperature 
+   REAL(EB) :: D_COEF		 	    !< Coefficient d in ignition temperature 
 
 END TYPE REACTION_TYPE
 

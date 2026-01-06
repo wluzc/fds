@@ -1399,12 +1399,7 @@ ELSE
    S_SGS = 0._EB
 ENDIF
 
-A_COEF = R1%USER_REAC_PARAM(1)
-B_COEF = R1%USER_REAC_PARAM(2)
-C_COEF = R1%USER_REAC_PARAM(3)
-D_COEF = R1%USER_REAC_PARAM(4)
-
-FREE_BURN_TEMPERATURE = A_COEF*S_SGS**3 + B_COEF*S_SGS**2 + C_COEF*S_SGS + D_COEF
+FREE_BURN_TEMPERATURE = R1%A_COEF*S_SGS**3 + R1%B_COEF*S_SGS**2 + R1%C_COEF*S_SGS + R1%D_COEF
 
 ! Evaluate extinction criterion using cell oxygen mass fraction based on Tech Guide Fig. 5.2 and Eq. 5.53
 
