@@ -990,7 +990,7 @@ Q_OUT = -RHO_IN*SUM(SPECIES_MIXTURE%H_F*(ZZ_GET-ZZ_0))/DT ! FDS Tech Guide (5.47
 
 IF (SUPPRESSION .AND. .NOT.EXTINCT) THEN
    SELECT CASE(EXTINCT_MOD)
-      CASE(EXTINCTION_1); CALL EXTINCT_1(EXTINCT,ZZ_0,TMP_IN,K_SGS,DELTA)
+      CASE(EXTINCTION_1); CALL EXTINCT_1(EXTINCT,ZZ_0,TMP_IN)
       CASE(EXTINCTION_2); CALL EXTINCT_2(EXTINCT,ZZ_0,ZZ_MIXED,TMP_IN)
    END SELECT
 ENDIF
@@ -1339,18 +1339,41 @@ END SUBROUTINE DUMP_CVODE_WARNING_SUMMARY
 
 #endif
 
-SUBROUTINE CHECK_AUTO_IGNITION(EXTINCT,TMP_IN,AIT,IIC,JJC,KKC,REAC_INDEX)
+SUBROUTINE CHECK_AUTO_IGNITION(EXTINCT,TMP_IN,AIT,IIC,JJC,KKC,REAC_INDEX,K_SGS,DELTA)
 
 ! For combustion to proceed the local gas temperature must be greater than AIT unless the cell has been excluded.
 
 USE DEVICE_VARIABLES, ONLY: DEVICE
 LOGICAL, INTENT(INOUT) :: EXTINCT
-REAL(EB), INTENT(IN) :: TMP_IN,AIT
+REAL(EB), INTENT(IN) :: TMP_IN,AIT,K_SGS,DELTA
 INTEGER, INTENT(IN) :: IIC,JJC,KKC,REAC_INDEX
 INTEGER :: IZ
+REAL(EB) :: S_SGS,T_IGN_MOD
 TYPE(REACTION_TYPE), POINTER :: RN
 
 RN => REACTION(REAC_INDEX)
+
+! --- Safety Check & Warning ---
+! Check if all polynomial coefficients are zero (uninitialized)
+IF (RN%A_SGS == 0._EB .AND. RN%B_SGS == 0._EB .AND. RN%C_SGS == 0._EB .AND. RN%D_SGS == 0._EB) THEN
+   ! Use a one-time warning (using a SAVE variable so it doesn't spam the terminal)
+   LOGICAL, SAVE :: WARNED = .FALSE.
+   IF (.NOT. WARNED) THEN
+      WRITE(*,*) 'WARNING: SGS Ignition coefficients not set for Reaction', REAC_INDEX
+      WRITE(*,*) 'Using standard constant AIT instead.'
+      WARNED = .TRUE.
+   ENDIF
+   T_IGN_MOD = AIT ! Fallback to standard constant value
+ELSE
+   ! --- Standard SGS Stress Logic ---
+   IF (DELTA > 0._EB) THEN
+      S_SGS = SQRT(TWTH * MAX(0._EB, K_SGS)) / DELTA
+   ELSE
+      S_SGS = 0._EB
+   ENDIF
+   WRITE(*,*) RN%A_SGS,RN%B_SGS,RN%C_SGS,RN%D_SGS
+   T_IGN_MOD = RN%A_SGS*S_SGS**3 + RN%B_SGS*S_SGS**2 + RN%C_SGS*S_SGS + RN%D_SGS
+ENDIF
 
 DO IZ=1,RN%N_AIT_EXCLUSION_ZONES
 
@@ -1369,7 +1392,7 @@ ENDDO
 
 EXTINCT = .TRUE.
 
-IF (TMP_IN > AIT) EXTINCT = .FALSE.
+IF (TMP_IN > T_IGN_MOD) EXTINCT = .FALSE.
 
 END SUBROUTINE CHECK_AUTO_IGNITION
 
@@ -1379,27 +1402,18 @@ END SUBROUTINE CHECK_AUTO_IGNITION
 !> \param ZZ_0 Array of lumped species mass fractions in the mixed part of the grid cell at the start of the time step
 !> \param TMP_IN Initial temperature of the grid cell
 
-SUBROUTINE EXTINCT_1(EXTINCT,ZZ_0,TMP_IN,K_SGS,DELTA)
+SUBROUTINE EXTINCT_1(EXTINCT,ZZ_0,TMP_IN)
 
 USE PHYSICAL_FUNCTIONS, ONLY: GET_MASS_FRACTION
-REAL(EB), INTENT(IN) :: TMP_IN,ZZ_0(1:N_TRACKED_SPECIES),K_SGS,DELTA
+REAL(EB), INTENT(IN) :: TMP_IN,ZZ_0(1:N_TRACKED_SPECIES)
 LOGICAL, INTENT(INOUT) :: EXTINCT
-REAL(EB) :: Y_O2,Y_O2_LIM,TMP_FACTOR,CFT,S_SGS,T_IGN_MOD
+REAL(EB) :: Y_O2,Y_O2_LIM,TMP_FACTOR,CFT
 TYPE(REACTION_TYPE), POINTER :: R1
 
 ! Use a single critical flame temperature from reaction 1
 
 R1 => REACTION(1)
 CFT = R1%CRITICAL_FLAME_TEMPERATURE
-
-! Compute Subgrid stresses
-IF (DELTA>0._EB) THEN
-   S_SGS = SQRT(TWTH * MAX(0._EB,K_SGS)) / DELTA
-ELSE
-   S_SGS = 0._EB
-ENDIF
-
-FREE_BURN_TEMPERATURE = R1%A_COEF*S_SGS**3 + R1%B_COEF*S_SGS**2 + R1%C_COEF*S_SGS + R1%D_COEF
 
 ! Evaluate extinction criterion using cell oxygen mass fraction based on Tech Guide Fig. 5.2 and Eq. 5.53
 
