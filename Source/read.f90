@@ -4815,6 +4815,10 @@ REAC_READ_LOOP: DO NR=1,N_REACTIONS
    RN%RAMP_CHI_R                = RAMP_CHI_R
    RN%SOOT_YIELD                = SOOT_YIELD
    RN%THIRD_BODY                = THIRD_BODY
+   RN%A_COEF                    = A_COEF
+   RN%B_COEF                    = B_COEF
+   RN%C_COEF                    = C_COEF
+   RN%D_COEF                    = D_COEF
 
    IF (COMBUSTION_ODE_SOLVER>RK2_RICHARDSON .AND. REACTYPE== 'ARRHENIUS-TYPE' .AND. RN%THIRD_BODY) &
       REACTYPE='THREE-BODY-ARRHENIUS'

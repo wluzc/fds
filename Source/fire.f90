@@ -1355,25 +1355,34 @@ RN => REACTION(REAC_INDEX)
 
 ! --- Safety Check & Warning ---
 ! Check if all polynomial coefficients are zero (uninitialized)
-IF (RN%A_SGS == 0._EB .AND. RN%B_SGS == 0._EB .AND. RN%C_SGS == 0._EB .AND. RN%D_SGS == 0._EB) THEN
-   ! Use a one-time warning (using a SAVE variable so it doesn't spam the terminal)
-   LOGICAL, SAVE :: WARNED = .FALSE.
-   IF (.NOT. WARNED) THEN
-      WRITE(*,*) 'WARNING: SGS Ignition coefficients not set for Reaction', REAC_INDEX
-      WRITE(*,*) 'Using standard constant AIT instead.'
-      WARNED = .TRUE.
-   ENDIF
-   T_IGN_MOD = AIT ! Fallback to standard constant value
+!IF (RN%A_SGS == 0._EB .AND. RN%B_SGS == 0._EB .AND. RN%C_SGS == 0._EB .AND. RN%D_SGS == 0._EB) THEN
+!   ! Use a one-time warning (using a SAVE variable so it doesn't spam the terminal)
+!   LOGICAL, SAVE :: WARNED = .FALSE.
+!   IF (.NOT. WARNED) THEN
+!      WRITE(*,*) 'WARNING: SGS Ignition coefficients not set for Reaction', REAC_INDEX
+!      WRITE(*,*) 'Using standard constant AIT instead.'
+!      WARNED = .TRUE.
+!   ENDIF
+!   T_IGN_MOD = AIT ! Fallback to standard constant value
+!ELSE
+!   ! --- Standard SGS Stress Logic ---
+!   IF (DELTA > 0._EB) THEN
+!      S_SGS = SQRT(TWTH * MAX(0._EB, K_SGS)) / DELTA
+!   ELSE
+!      S_SGS = 0._EB
+!   ENDIF
+!   WRITE(*,*) RN%A_SGS,RN%B_SGS,RN%C_SGS,RN%D_SGS
+!   T_IGN_MOD = RN%A_SGS*S_SGS**3 + RN%B_SGS*S_SGS**2 + RN%C_SGS*S_SGS + RN%D_SGS
+!ENDIF
+
+! --- Standard SGS Stress Logic ---
+IF (DELTA > 0._EB) THEN
+   S_SGS = SQRT(TWTH * MAX(0._EB, K_SGS)) / DELTA
 ELSE
-   ! --- Standard SGS Stress Logic ---
-   IF (DELTA > 0._EB) THEN
-      S_SGS = SQRT(TWTH * MAX(0._EB, K_SGS)) / DELTA
-   ELSE
-      S_SGS = 0._EB
-   ENDIF
-   WRITE(*,*) RN%A_SGS,RN%B_SGS,RN%C_SGS,RN%D_SGS
-   T_IGN_MOD = RN%A_SGS*S_SGS**3 + RN%B_SGS*S_SGS**2 + RN%C_SGS*S_SGS + RN%D_SGS
+   S_SGS = 0._EB
 ENDIF
+WRITE(*,*) RN%A_COEF,RN%B_COEF,RN%C_COEF,RN%D_COEF
+T_IGN_MOD = RN%A_COEF*S_SGS**3 + RN%B_COEF*S_SGS**2 + RN%C_COEF*S_SGS + RN%D_COEF
 
 DO IZ=1,RN%N_AIT_EXCLUSION_ZONES
 
